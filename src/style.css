@@ -1,1 +1,30 @@
 @import "tailwindcss";
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap");
+
+/* Dropdown labels */
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="poppins"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="poppins"]::before {
+  content: "Poppins";
+  font-family: "Poppins", sans-serif;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="roboto"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="roboto"]::before {
+  content: "Roboto";
+  font-family: "Roboto", sans-serif;
+}
+
+/* Actual content styling */
+.ql-font-poppins {
+  font-family: "Poppins", sans-serif;
+}
+.ql-font-roboto {
+  font-family: "Roboto", sans-serif;
+}
+.ql-font-inconsolata {
+  font-family: "Inconsolata", monospace;
+}
+.ql-font-mirza {
+  font-family: "Mirza", cursive;
+}
