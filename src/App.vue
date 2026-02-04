@@ -43,6 +43,7 @@ onMounted(() => {
   <div class="mx-auto max-w-[1350px] mt-8 mb-4 px-6 font-Poppins">
     <div>
       <h2 class="text-2xl font-bold mb-4">Rich Text Editor with Quill.js</h2>
+      <p>Click on the editor below to start typing. The output will be displayed below.</p>
       <!-- Editor container -->
       <div ref="editor" style="height: 300px"></div>
 
