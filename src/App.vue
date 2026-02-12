@@ -1,56 +1,124 @@
 <script setup>
-import { ref, onMounted } from "vue";
-import Quill from "quill";
-import "quill/dist/quill.snow.css"; // import Quill styling
+import { ref, onMounted, onBeforeUnmount } from "vue";
 
-// Optional: add custom font & size support
-// const Font = Quill.import("formats/font");
-// Font.whitelist = ["poppins", "roboto", "inconsolata", "mirza"];
-// Quill.register(Font, true);
+//------------------------------------------------- State & Refs -------------------------------------------------//
 
-const editor = ref(null);
-const content = ref("");
+// for speech recognition
+const isListening = ref(false);
+const interimTranscript = ref("");
+const finalTranscript = ref("");
+let recognition = null;
 
+// ---------------------------------------------- Methods ----------------------------------------------//
+function startListening() {
+  if (!recognition) return;
+  interimTranscript.value = "";
+  finalTranscript.value = "";
+  recognition.start();
+}
+
+function stopListening() {
+  if (!recognition) return;
+  recognition.stop();
+}
+
+function sendToBackend() {
+  console.log("Send this text to backend:", finalTranscript.value);
+
+  // Example for future Socket.io
+  // socket.emit("candidate_answer", finalTranscript.value)
+
+  alert("Transcript sent! Check console.");
+}
+
+// ---------------------------------------------- Lifecycle Hooks ----------------------------------------------//
 onMounted(() => {
-  const quill = new Quill(editor.value, {
-    theme: "snow",
-    placeholder: "Write something awesome...",
-    modules: {
-      toolbar: [
-        [{ font: [] }],
-        [{ header: [1, 2, 3, 4, 5, false] }], // font size
-        ["bold", "italic", "underline", "strike"], // toggled buttons
-        [{ color: [] }, { background: [] }], // text color & background
-        [{ script: "sub" }, { script: "super" }], // superscript/subscript
-        [{ header: 1 }, { header: 2 }], // headers
-        [{ align: [] }], // text align
-        [{ list: "ordered" }, { list: "bullet" }], // lists
-        ["blockquote", "code-block"],
-        ["link", "image", "video"],
-        ["clean"], // remove formatting
-      ],
-    },
-  });
+  // Initialize Speech Recognition
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  // Sync editor content with Vue ref
-  quill.on("text-change", () => {
-    content.value = quill.root.innerHTML;
-  });
+  if (!SpeechRecognition) {
+    alert("Web Speech API not supported in this browser (use Chrome).");
+    return;
+  }
+  console.log(
+    "SpeechRecognition supported, initializing...",
+    SpeechRecognition,
+  );
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+
+  recognition.onstart = () => {
+    isListening.value = true;
+  };
+
+  recognition.onend = () => {
+    isListening.value = false;
+  };
+
+  recognition.onerror = (event) => {
+    console.error("Speech error:", event.error);
+  };
+
+  recognition.onresult = (event) => {
+    let interim = "";
+    let final = finalTranscript.value;
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        final += transcript + " ";
+      } else {
+        interim += transcript;
+      }
+    }
+
+    finalTranscript.value = final;
+    interimTranscript.value = interim;
+  };
+});
+
+onBeforeUnmount(() => {
+  if (recognition) recognition.stop();
 });
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1350px] mt-8 mb-4 px-6 font-Poppins">
-    <div>
-      <h2 class="text-2xl font-bold mb-4">Rich Text Editor with Quill.js</h2>
-      <p>Click on the editor below to start typing. The output will be displayed below</p>
-      <!-- Editor container -->
-      <div ref="editor" style="height: 350px"></div>
+  <!-- Transcribe -->
+  <div class="container">
+    <h2>AI Interview - Speech Input</h2>
 
-      <!-- Preview -->
-      <h3 class="mt-4">Output:</h3>
-      <div v-html="content" class="border p-2 editor-content text-red-400"></div>
-      <!-- <div class="border p-2 editor-content">{{ content }}</div> -->
+    <div class="status">
+      Status:
+      <span :class="{ active: isListening }">
+        {{ isListening ? "Listening..." : "Idle" }}
+      </span>
+    </div>
+
+    <div class="transcript-box">
+      <h4>Live Transcript</h4>
+      <p>{{ interimTranscript }}</p>
+    </div>
+
+    <div class="transcript-box final">
+      <h4>Final Transcript</h4>
+      <p>{{ finalTranscript }}</p>
+    </div>
+
+    <div class="buttons">
+      <button @click="startListening" :disabled="isListening">
+        Start Speaking
+      </button>
+
+      <button @click="stopListening" :disabled="!isListening">Stop</button>
+
+      <button @click="sendToBackend" :disabled="!finalTranscript">
+        Send to Backend
+      </button>
     </div>
   </div>
 </template>
@@ -58,5 +126,38 @@ onMounted(() => {
 <style>
 .editor-content * {
   all: revert;
+}
+
+.container {
+  max-width: 600px;
+  margin: 40px auto;
+  font-family: Arial, sans-serif;
+}
+
+.status {
+  margin-bottom: 10px;
+}
+
+.status .active {
+  color: green;
+  font-weight: bold;
+}
+
+.transcript-box {
+  border: 1px solid #ccc;
+  padding: 10px;
+  min-height: 60px;
+  margin-bottom: 10px;
+  background: #f9f9f9;
+}
+
+.transcript-box.final {
+  background: #eef7ff;
+}
+
+.buttons button {
+  margin-right: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
 }
 </style>
