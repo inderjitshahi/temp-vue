@@ -9,6 +9,11 @@ const interimTranscript = ref("");
 const finalTranscript = ref("");
 let recognition = null;
 
+//tts
+const text = ref("Hello, please introduce yourself.");
+const voices = ref([]);
+const selectedVoiceIndex = ref(0);
+let synth = window.speechSynthesis;
 // ---------------------------------------------- Methods ----------------------------------------------//
 function startListening() {
   if (!recognition) return;
@@ -29,6 +34,35 @@ function sendToBackend() {
   // socket.emit("candidate_answer", finalTranscript.value)
 
   alert("Transcript sent! Check console.");
+}
+
+//------------------------------------------- TTS --------------------------------------------------//
+function loadVoices() {
+  voices.value = synth.getVoices();
+}
+
+function speak() {
+  if (!text.value) return;
+
+  // Stop any current speech
+  synth.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text.value);
+
+  const selectedVoice = voices.value[selectedVoiceIndex.value];
+  if (selectedVoice) {
+    utterance.voice = selectedVoice;
+  }
+
+  utterance.rate = 1; // speed (0.5 - 2)
+  utterance.pitch = 1; // tone (0 - 2)
+  utterance.volume = 1; // volume (0 - 1)
+
+  synth.speak(utterance);
+}
+
+function stop() {
+  synth.cancel();
 }
 
 // ---------------------------------------------- Lifecycle Hooks ----------------------------------------------//
@@ -80,6 +114,12 @@ onMounted(() => {
     finalTranscript.value = final;
     interimTranscript.value = interim;
   };
+
+  //tts
+  loadVoices();
+
+  // Voices load asynchronously in some browsers
+  speechSynthesis.onvoiceschanged = loadVoices;
 });
 
 onBeforeUnmount(() => {
@@ -88,9 +128,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Transcribe -->
-  <div class="container">
-    <h2>AI Interview - Speech Input</h2>
+  <!------------------------- Transcribe ----------------->
+  <div class="w-full max-w-xl mx-auto mt-10 border rounded-lg p-6">
+    <h2 class="text-center text-xl">AI Interview - Speech Input</h2>
 
     <div class="status">
       Status:
@@ -110,15 +150,60 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="buttons">
-      <button @click="startListening" :disabled="isListening">
+      <button
+        @click="startListening"
+        :disabled="isListening"
+        class="rounded px-3 py-1 border cursor-pointer hover:bg-gray-100 hover:scale-95"
+      >
         Start Speaking
       </button>
 
-      <button @click="stopListening" :disabled="!isListening">Stop</button>
-
-      <button @click="sendToBackend" :disabled="!finalTranscript">
-        Send to Backend
+      <button
+        @click="stopListening"
+        :disabled="!isListening"
+        class="rounded px-3 py-1 border cursor-pointer hover:bg-gray-100 hover:scale-95"
+      >
+        Stop
       </button>
+    </div>
+  </div>
+
+  <!-- TTS Controls -->
+  <div
+    class="w-full max-w-xl mx-auto mt-10 border rounded-lg p-6 flex flex-col gap-4"
+  >
+    <h2 class="text-center text-xl">Text to Speech Demo</h2>
+
+    <textarea
+      class="border w-full rounded p-3"
+      v-model="text"
+      placeholder="Enter text to speak"
+      rows="4"
+    ></textarea>
+    <p class="-mt-4 text-sm">Enter any text above to hear it spoken</p>
+
+    <div class="flex flex-row gap-6">
+      <button
+        @click="speak"
+        class="rounded px-3 py-1 border cursor-pointer hover:bg-gray-100 hover:scale-95"
+      >
+        Speak
+      </button>
+      <button
+        @click="stop"
+        class="rounded px-3 py-1 border cursor-pointer hover:bg-gray-100 hover:scale-95"
+      >
+        Stop
+      </button>
+    </div>
+
+    <div class="flex gap-4">
+      <label>Voice:</label>
+      <select v-model="selectedVoiceIndex" class="cursor-pointer">
+        <option v-for="(voice, index) in voices" :key="index" :value="index">
+          {{ voice.name }} ({{ voice.lang }})
+        </option>
+      </select>
     </div>
   </div>
 </template>
